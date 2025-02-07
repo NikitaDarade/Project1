@@ -1,0 +1,51 @@
+name: CI/CD Pipeline for Web App
+
+on:
+  push:
+    branches:
+      - main  # Trigger the pipeline when there’s a push to the main branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'  # Specify the version of Node.js
+
+    - name: Install dependencies
+      run: |
+        npm install
+
+    - name: Run tests
+      run: |
+        npm test  # You can add tests if you have them
+
+    - name: Build project
+      run: |
+        npm run build  # Replace this with your build command if applicable
+
+  deploy:
+    needs: build  # Ensure the build step is completed first
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Deploy to EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no -i ${{ secrets.AWS_SSH_KEY }} ec2-user@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
+          cd /path/to/your/app
+          git pull origin main  # Pull the latest changes from GitHub
+          npm install  # Install dependencies
+          pm2 restart app.js  # Restart your app using pm2 (if installed)
+        EOF
+      env:
+        AWS_SSH_KEY: ${{ secrets.AWS_SSH_KEY }}  # Your EC2 SSH key stored as a secret in GitHub
+        EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}  # Your EC2 public IP stored as a secret in GitHub
